@@ -31,3 +31,6 @@
 # config might contain sensitive stuff
 config/*
 !config/example/
+
+# oops
+output/*

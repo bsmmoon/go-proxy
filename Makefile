@@ -7,7 +7,8 @@ init:
 install:
 	go get -t -d \
 		github.com/tebeka/selenium \
-		github.com/gookit/color
+		github.com/gookit/color \
+		gopkg.in/elazarl/goproxy.v1
 	dep ensure
 
 build:
