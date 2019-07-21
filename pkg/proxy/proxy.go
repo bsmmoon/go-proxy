@@ -1,29 +1,41 @@
 package proxy
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/bsmmoon/go-proxy/tool/logger"
 	"github.com/elazarl/goproxy"
-	"github.com/tebeka/selenium"
 )
 
-type ProxyOptions struct {
-	SeleniumDriverPath string
-	GeckoDriverPath    string
-	Port               int
+// Options Options
+type Options struct {
+	Port   int
+	Filter Filter
+}
+
+// Filter Filter
+type Filter struct {
+	ContentType string
+	Filename    string
+}
+
+func containAny(strs, del, target string) bool {
+	for _, str := range strings.Split(strs, del) {
+		if strings.Contains(target, str) {
+			return true
+		}
+	}
+	return false
 }
 
 // Proxy proxy
-func Proxy(options ProxyOptions) {
+func Proxy(options Options) {
 	var err error
-	logger.INFO("Starting Proxy")
+	logger.INFO("Starting Proxy: %v", options)
 	proxy := goproxy.NewProxyHttpServer()
 
 	proxy.OnRequest().DoFunc(
@@ -38,7 +50,7 @@ func Proxy(options ProxyOptions) {
 			defer func() {
 				contentType := r.Header.Get("Content-Type")
 				logger.INFO("Content-Type: %v", contentType)
-				if contentType == "image/png" {
+				if containAny(options.Filter.ContentType, ",", contentType) {
 					logger.INFO("Header: %v", r.Header)
 					logger.INFO("RequestURI: %v", r.Request.URL.RequestURI())
 					uriTokens := strings.Split(r.Request.URL.RequestURI(), "/")
@@ -59,47 +71,8 @@ func Proxy(options ProxyOptions) {
 			return r
 		})
 
-	err = http.ListenAndServe(fmt.Sprintf(":%v", "8089"), proxy)
+	err = http.ListenAndServe(fmt.Sprintf(":%v", options.Port), proxy)
 	if err != nil {
 		logger.FATAL(err.Error())
 	}
-}
-
-// Selenium selenium
-func Selenium(options ProxyOptions) {
-	logger.INFO("Starting Selenium")
-	opts := []selenium.ServiceOption{
-		// selenium.StartFrameBuffer(),        // Start an X frame buffer for the browser to run in. // xvfb not supported in MacOS?
-		selenium.GeckoDriver(options.GeckoDriverPath), // Specify the path to GeckoDriver in order to use Firefox.
-		selenium.Output(os.Stderr),                    // Output debug information to STDERR.
-	}
-	service, err := selenium.NewSeleniumService(options.SeleniumDriverPath, options.Port, opts...)
-	if err != nil {
-		logger.FATAL(err.Error()) // panic is used only as an example and is not otherwise recommended.
-	}
-	defer service.Stop()
-
-	// Connect to the WebDriver instance running locally.
-	caps := selenium.Capabilities{
-		"browserName": "firefox",
-		"proxy": selenium.Proxy{
-			Type: selenium.Manual,
-			HTTP: "localhost:8089",
-		},
-	}
-	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", options.Port))
-	if err != nil {
-		logger.FATAL(err.Error())
-	}
-	defer wd.Quit()
-
-	// Navigate to the simple playground interface.
-	if err := wd.Get("http://eu.httpbin.org/"); err != nil {
-		panic(err)
-	}
-
-	logger.INFO("insert y value here: ")
-	input := bufio.NewScanner(os.Stdin)
-	input.Scan()
-	logger.INFO(input.Text())
 }

@@ -14,11 +14,13 @@ install:
 build:
 	GOOS=darwin CGO_ENABLED=0 go install -ldflags="-s -w" ./...
 
+# Ex. make ARGS="-content-type=image,javascript" run
 run:
 	SELENIUM_PATH=${SELENIUM_PATH} \
 	GECKO_PATH=${GECKO_PATH} \
-	PORT=${PORT} \
-		${GOPATH}/bin/proxy
+	SELENIUM_PORT=${SELENIUM_PORT} \
+	PROXY_PORT=${PROXY_PORT} \
+		${GOPATH}/bin/proxy ${ARGS}
 
 docker-build:
 	docker build .

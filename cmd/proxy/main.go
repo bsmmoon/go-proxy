@@ -1,10 +1,12 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"strconv"
 
 	"github.com/bsmmoon/go-proxy/pkg/proxy"
+	"github.com/bsmmoon/go-proxy/pkg/seleniumwrapper"
 	"github.com/bsmmoon/go-proxy/tool/logger"
 )
 
@@ -12,20 +14,29 @@ var forever = make(chan int)
 
 func main() {
 	logger.SetCmd("Proxy")
-	port, _ := strconv.Atoi(os.Getenv("PORT"))
 
-	options := proxy.ProxyOptions{
-		SeleniumDriverPath: os.Getenv("SELENIUM_PATH"),
-		GeckoDriverPath:    os.Getenv("GECKO_PATH"),
-		Port:               port,
-	}
-	logger.INFO("\nPort: %v\nSelenium: %v\nGecko: %v", "8089", options.GeckoDriverPath, options.SeleniumDriverPath)
+	contentTypeFlag := flag.String("content-type", "", "ex. ")
 
+	flag.Parse()
+	contentType := *contentTypeFlag
+
+	proxyPort, _ := strconv.Atoi(os.Getenv("PROXY_PORT"))
 	go func() {
-		proxy.Proxy(options)
+		proxy.Proxy(proxy.Options{
+			Port: proxyPort,
+			Filter: proxy.Filter{
+				ContentType: contentType,
+			},
+		})
 	}()
+
+	seleniumPort, _ := strconv.Atoi(os.Getenv("SELENIUM_PORT"))
 	go func() {
-		proxy.Selenium(options)
+		seleniumwrapper.Selenium(seleniumwrapper.Options{
+			SeleniumDriverPath: os.Getenv("SELENIUM_PATH"),
+			GeckoDriverPath:    os.Getenv("GECKO_PATH"),
+			Port:               seleniumPort,
+		})
 	}()
 
 	<-forever
