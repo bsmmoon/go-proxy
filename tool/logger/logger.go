@@ -6,6 +6,8 @@ import (
 	"log"
 	"runtime/debug"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 var cmd string
@@ -16,26 +18,27 @@ func SetCmd(name string) {
 
 // INFO : low priority, no risk
 func INFO(message string, a ...interface{}) {
-	log.Println(fmt.Sprintf("[%v][INFO]", cmd), fmt.Sprintf(message, a...))
+	color.New(color.FgCyan).Println(fmt.Sprintf("[%v][INFO]", cmd), fmt.Sprintf(message, a...))
 }
 
 // WARNING : low priority, low risk
 func WARNING(message string, a ...interface{}) error {
 	fullMessage := fmt.Sprintf("[%v][WARNING] %v", cmd, fmt.Sprintf(message, a...))
-	log.Println(fullMessage)
+	color.New(color.FgCyan).Println(fullMessage)
 	return fmt.Errorf(fullMessage)
 }
 
 // ERROR : high priority, low rist
 func ERROR(message string, a ...interface{}) error {
 	fullMessage := fmt.Sprintf("[%v][ERROR] %v\n%v", cmd, fmt.Sprintf(message, a...), stack())
-	log.Println(fullMessage)
+	color.New(color.FgYellow).Println(fullMessage)
 	return fmt.Errorf(fullMessage)
 }
 
 // FATAL : high priority, high risk. terminates the goroutine
 func FATAL(message string, a ...interface{}) {
-	log.Fatalln(fmt.Sprintf("[%v][FATAL]", cmd), fmt.Sprintf(message, a...), stack())
+	color.New(color.FgRed).Println(fmt.Sprintf("[%v][FATAL]", cmd), fmt.Sprintf(message, a...), stack())
+	log.Fatalln("FATAL!")
 }
 
 func stack() string {
