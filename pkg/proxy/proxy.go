@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/bsmmoon/go-proxy/tool/logger"
 	"github.com/elazarl/goproxy"
@@ -38,6 +40,8 @@ func Proxy(options Options) {
 	logger.INFO("Starting Proxy: %v", options)
 	proxy := goproxy.NewProxyHttpServer()
 
+	sessionID := time.Now().Unix()
+
 	proxy.OnRequest().DoFunc(
 		func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 			r.Header.Set("X-GoProxy", "yxorPoG-X")
@@ -57,9 +61,14 @@ func Proxy(options Options) {
 					if len(uriTokens) == 0 {
 						return
 					}
+					filepath := fmt.Sprintf("./output/%v", sessionID)
 					filename := uriTokens[len(uriTokens)-1]
-					logger.INFO("Filename: %v", filename)
-					err := ioutil.WriteFile(fmt.Sprintf("./output/%v", filename), body, 0644)
+					logger.INFO("Filepath: %v, Filename: %v", filepath, filename)
+					err = os.MkdirAll(filepath, os.ModePerm)
+					if err != nil {
+						logger.WARNING("Something went wrong creating filepath: %v", err.Error())
+					}
+					err = ioutil.WriteFile(fmt.Sprintf("%v/%v", filepath, filename), body, 0644)
 					if err != nil {
 						logger.WARNING("Something went wrong writing to file: %v", err.Error())
 					}
