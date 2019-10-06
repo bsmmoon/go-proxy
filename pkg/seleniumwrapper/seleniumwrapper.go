@@ -9,36 +9,33 @@ import (
 	"github.com/tebeka/selenium"
 )
 
-// Options Options
-type Options struct {
+// Option Option
+type Option struct {
 	SeleniumDriverPath string
 	GeckoDriverPath    string
 	Port               int
+	ProxyPort          int
+	Browser            string
 }
 
 // Selenium selenium
-func Selenium(options Options) {
-	logger.INFO("Starting Selenium: %v", options)
-	opts := []selenium.ServiceOption{
-		// selenium.StartFrameBuffer(),        // Start an X frame buffer for the browser to run in. // xvfb not supported in MacOS?
-		selenium.GeckoDriver(options.GeckoDriverPath), // Specify the path to GeckoDriver in order to use Firefox.
-		selenium.Output(os.Stderr),                    // Output debug information to STDERR.
-	}
-	service, err := selenium.NewSeleniumService(options.SeleniumDriverPath, options.Port, opts...)
+func Selenium(option Option) {
+	logger.INFO("Starting Selenium: %v", option)
+	service, err := makeFirefoxService(option)
 	if err != nil {
 		logger.FATAL(err.Error()) // panic is used only as an example and is not otherwise recommended.
 	}
 	defer service.Stop()
 
 	// Connect to the WebDriver instance running locally.
-	caps := selenium.Capabilities{
-		"browserName": "firefox",
+	capabilities := selenium.Capabilities{
+		"browserName": option.Browser,
 		"proxy": selenium.Proxy{
 			Type: selenium.Manual,
-			HTTP: "localhost:8089",
+			HTTP: fmt.Sprintf("localhost:%v", option.ProxyPort),
 		},
 	}
-	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", options.Port))
+	wd, err := selenium.NewRemote(capabilities, fmt.Sprintf("http://localhost:%d/wd/hub", option.Port))
 	if err != nil {
 		logger.FATAL(err.Error())
 	}
@@ -49,8 +46,27 @@ func Selenium(options Options) {
 		panic(err)
 	}
 
-	logger.INFO("insert y value here: ")
+	// Quit upon user input
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
-	logger.INFO(input.Text())
+}
+
+const FIREFOX = "firefox"
+const CHROME = "chrome"
+
+func makeService(options Option) (*selenium.Service, error) {
+	switch options.Browser {
+	case CHROME:
+
+	}
+	return makeFirefoxService(options) // default is Firefox
+}
+
+func makeFirefoxService(option Option) (*selenium.Service, error) {
+	opts := []selenium.ServiceOption{
+		selenium.GeckoDriver(option.GeckoDriverPath), // Specify the path to GeckoDriver in order to use Firefox.
+		selenium.Output(os.Stderr),                   // Output debug information to STDERR.
+	}
+	return selenium.NewSeleniumService(option.SeleniumDriverPath, option.Port, opts...)
+
 }

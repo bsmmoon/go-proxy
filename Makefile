@@ -40,3 +40,6 @@ drivers-update:
 
 drivers-list:
 	ls -al ${DRIVER_PATH}
+
+clean-output:
+	rm -rf ./output

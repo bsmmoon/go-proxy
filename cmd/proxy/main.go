@@ -32,10 +32,12 @@ func main() {
 
 	seleniumPort, _ := strconv.Atoi(os.Getenv("SELENIUM_PORT"))
 	go func() {
-		seleniumwrapper.Selenium(seleniumwrapper.Options{
+		seleniumwrapper.Selenium(seleniumwrapper.Option{
 			SeleniumDriverPath: os.Getenv("SELENIUM_PATH"),
 			GeckoDriverPath:    os.Getenv("GECKO_PATH"),
 			Port:               seleniumPort,
+			ProxyPort:          proxyPort,
+			Browser:            seleniumwrapper.FIREFOX,
 		})
 	}()
 
