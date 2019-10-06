@@ -6,7 +6,6 @@ init:
 
 install:
 	go get -t -d \
-		github.com/tebeka/selenium \
 		github.com/gookit/color \
 		gopkg.in/elazarl/goproxy.v1
 	dep ensure
@@ -14,39 +13,15 @@ install:
 build:
 	GOOS=darwin CGO_ENABLED=0 go install -ldflags="-s -w" ./...
 
+build-window:
+	cmd /c /v "set GOOS=windows&& set CGO_ENABLED=0&& go install -ldflags="-s -w" ./..."
+
+run-window:
+	cmd /c "set PROXY_PORT=${PROXY_PORT}&${GOPATH}/bin/proxy ${ARGS}"
+
 # Ex. make ARGS="-content-type=image,javascript" run
 run:
-	SELENIUM_PATH=${SELENIUM_PATH} \
-	GECKO_PATH=${GECKO_PATH} \
-	CHROME_PATH=${CHROME_PATH} \
-	SELENIUM_PORT=${SELENIUM_PORT} \
-	PROXY_PORT=${PROXY_PORT} \
-		${GOPATH}/bin/proxy ${ARGS}
-
-prepare-release:
-	make build
-	-mkdir ./release
-	cp ${GOPATH}/bin/proxy ./release
-	cp ./rsc/* ./release
-
-docker-build:
-	docker build .
-
-docker-run:
-	docker run \
-		$(shell docker images --filter "label=project=go-proxy" --filter "label=image=build" --format="{{.ID}}" | head -1)
-
-docker-clean:
-	-docker rm  \
-		$(shell docker ps -f "status=exited" -q)
-	-docker rmi \
-		$(shell docker images --filter "label=project=go-proxy" --filter "label=image=build" --format="{{.ID}}" )
-
-drivers-update:
-	( cd ${GOPATH}/src/github.com/tebeka/selenium/vendor; go get -d .; go run init.go --alsologtostderr )
-
-drivers-list:
-	ls -al ${DRIVER_PATH}
+	PROXY_PORT=${PROXY_PORT} ${GOPATH}/bin/proxy ${ARGS}
 
 clean-output:
 	rm -rf ./output
