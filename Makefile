@@ -23,6 +23,12 @@ run:
 	PROXY_PORT=${PROXY_PORT} \
 		${GOPATH}/bin/proxy ${ARGS}
 
+prepare-release:
+	make build
+	-mkdir ./release
+	cp ${GOPATH}/bin/proxy ./release
+	cp ./rsc/* ./release
+
 docker-build:
 	docker build .
 
