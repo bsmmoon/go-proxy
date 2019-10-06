@@ -13,6 +13,7 @@ import (
 type Option struct {
 	SeleniumDriverPath string
 	GeckoDriverPath    string
+	ChromeDriverPath   string
 	Port               int
 	ProxyPort          int
 	Browser            string
@@ -52,14 +53,18 @@ func Selenium(option Option) {
 }
 
 const FIREFOX = "firefox"
+
+// CHROME make sure you add chromedriver to your PATH!!
 const CHROME = "chrome"
 
 func makeService(options Option) (*selenium.Service, error) {
 	switch options.Browser {
+	case FIREFOX:
+		return makeFirefoxService(options)
 	case CHROME:
-
+		return makeChromeService(options)
 	}
-	return makeFirefoxService(options) // default is Firefox
+	return nil, nil
 }
 
 func makeFirefoxService(option Option) (*selenium.Service, error) {
@@ -68,5 +73,12 @@ func makeFirefoxService(option Option) (*selenium.Service, error) {
 		selenium.Output(os.Stderr),                   // Output debug information to STDERR.
 	}
 	return selenium.NewSeleniumService(option.SeleniumDriverPath, option.Port, opts...)
+}
 
+func makeChromeService(option Option) (*selenium.Service, error) {
+	opts := []selenium.ServiceOption{
+		selenium.ChromeDriver(option.ChromeDriverPath), // Specify the path to GeckoDriver in order to use Chrome.
+		selenium.Output(os.Stderr),                     // Output debug information to STDERR.
+	}
+	return selenium.NewChromeDriverService(option.SeleniumDriverPath, option.Port, opts...)
 }

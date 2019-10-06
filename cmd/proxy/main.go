@@ -35,9 +35,10 @@ func main() {
 		seleniumwrapper.Selenium(seleniumwrapper.Option{
 			SeleniumDriverPath: os.Getenv("SELENIUM_PATH"),
 			GeckoDriverPath:    os.Getenv("GECKO_PATH"),
+			ChromeDriverPath:   os.Getenv("CHROME_PATH"),
 			Port:               seleniumPort,
 			ProxyPort:          proxyPort,
-			Browser:            seleniumwrapper.FIREFOX,
+			Browser:            seleniumwrapper.CHROME,
 		})
 	}()
 
