@@ -25,9 +25,9 @@ type Filter struct {
 	Filename    string
 }
 
-func containAny(strs, del, target string) bool {
-	for _, str := range strings.Split(strs, del) {
-		if strings.Contains(target, str) {
+func containAny(wantedTokens []string, target string) bool {
+	for _, wantedToken := range wantedTokens {
+		if strings.Contains(target, wantedToken) {
 			return true
 		}
 	}
@@ -41,47 +41,72 @@ func Proxy(options Options) {
 	proxy := goproxy.NewProxyHttpServer()
 
 	sessionID := time.Now().Unix()
+	filepath := fmt.Sprintf("./output/%v", sessionID)
+	err = os.MkdirAll(filepath, os.ModePerm)
+	if err != nil {
+		logger.ERROR("Something went wrong creating filepath: %v", err.Error())
+	}
+
+	wantedTypes := strings.Split(options.Filter.ContentType, ",")
 
 	proxy.OnRequest().DoFunc(
-		func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-			r.Header.Set("X-GoProxy", "yxorPoG-X")
-			return r, nil
+		func(response *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+			return response, nil
 		})
 
 	proxy.OnResponse().DoFunc(
-		func(r *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
+		func(response *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
+			if response == nil {
+				logger.WARNING("No response given, ignored")
+				return nil
+			}
+
 			var body []byte
+
+			// TODO: use go-routine so that it returns response without waiting for copying the data
 			defer func() {
-				contentType := r.Header.Get("Content-Type")
-				logger.INFO("Content-Type: %v", contentType)
-				if containAny(options.Filter.ContentType, ",", contentType) {
-					logger.INFO("Header: %v", r.Header)
-					logger.INFO("RequestURI: %v", r.Request.URL.RequestURI())
-					uriTokens := strings.Split(r.Request.URL.RequestURI(), "/")
-					if len(uriTokens) == 0 {
-						return
-					}
-					filepath := fmt.Sprintf("./output/%v", sessionID)
-					filename := uriTokens[len(uriTokens)-1]
-					logger.INFO("Filepath: %v, Filename: %v", filepath, filename)
-					err = os.MkdirAll(filepath, os.ModePerm)
-					if err != nil {
-						logger.WARNING("Something went wrong creating filepath: %v", err.Error())
-					}
-					err = ioutil.WriteFile(fmt.Sprintf("%v/%v", filepath, filename), body, 0644)
-					if err != nil {
-						logger.WARNING("Something went wrong writing to file: %v", err.Error())
-					}
+				logger.INFO("Header: %v", response.Header)
+
+				contentType := response.Header.Get("Content-Type")
+				if !containAny(wantedTypes, contentType) {
+					return
+				}
+
+				logger.INFO("RequestURI: %v", response.Request.URL.RequestURI())
+				uriTokens := strings.Split(response.Request.URL.RequestURI(), "/")
+				if len(uriTokens) == 0 {
+					return
+				}
+
+				if len(body) == 0 {
+					logger.INFO("Empty body, ignored")
+					return
+				}
+
+				filename := uriTokens[len(uriTokens)-1]
+				logger.INFO("Copying the body.. Filepath: %v, Filename: %v", filepath, filename)
+				if len(filename) == 0 {
+					logger.WARNING("Empty filename, ignored")
+					return
+				}
+				err := ioutil.WriteFile(fmt.Sprintf("%v/%v", filepath, filename), body, 0644)
+				if err != nil {
+					logger.ERROR("Something went wrong writing to file: %v", err.Error())
 				}
 			}()
 
-			body, _ = ioutil.ReadAll(r.Body)
-			r.Body = ioutil.NopCloser(bytes.NewBufferString(string(body)))
-			return r
+			body = copyBodyFromResponse(response)
+			return response
 		})
 
 	err = http.ListenAndServe(fmt.Sprintf(":%v", options.Port), proxy)
 	if err != nil {
 		logger.FATAL(err.Error())
 	}
+}
+
+func copyBodyFromResponse(response *http.Response) []byte {
+	data, _ := ioutil.ReadAll(response.Body)                              // flush body into data
+	response.Body = ioutil.NopCloser(bytes.NewBufferString(string(data))) // fill body with the copy of data
+	return data
 }
